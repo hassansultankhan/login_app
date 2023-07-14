@@ -1,68 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-// import 'package:google_fonts/google_fonts.dart';
+import 'package:login_app/profileScreen.dart';
+
 class loginScreen extends StatelessWidget {
-  const loginScreen({super.key});
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser!.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
+      final User? user = userCredential.user;
+
+      if (user != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfileScreen(
+              displayName: user.displayName ?? '',
+              email: user.email ?? '',
+              photoUrl: user.photoURL ?? '',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      print('Error signing in with Google: $error');
+      // Handle the error here
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Login'),
+      ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            SizedBox(
-              width: 200,
-              height: 40,
-              child:ElevatedButton(      
-                          onPressed:() => fireLogin(),
-                          child:  const Row(
-                            mainAxisAlignment: MainAxisAlignment.center, 
-                            children:[
-                              Text('Login'),
-                              Icon(Icons.login)  
-                            ]
-                          ),           
-                          ),
-            ),
-
-          ],
-        )
+        child: ElevatedButton(
+          onPressed: () => _handleGoogleSignIn(context),
+          child: Text('Sign in with Google'),
+        ),
       ),
     );
-  }
-  void fireLogin()async{
-    // create code for loging into firebase authentication
-    try {
-      // GoogleSignIn allows you to authenticate Google users.
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      // Holds fields describing a signed in user's identity
-      final GoogleSignInAccount? googleSignInAccount = await googleSignIn.signIn();
-
-      if (googleSignInAccount != null){
-        // Holds authentication tokens after sign in.
-        final GoogleSignInAuthentication  googleAuth = await googleSignInAccount.authentication;
-      
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-        final User? user = userCredential.user;
-
-        if (user != null){
-          print("User Signed in : ${user.displayName}");
-        }
-        else{
-          print('Sign in failed');
-        }
-      }
-      else{
-        print('Google sign-in canceled.');
-      }
-    }
-    catch(e){print('error signing in: $e');}
   }
 }
